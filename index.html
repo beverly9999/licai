@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>理财智能评估与配置</title>
+<meta name="theme-color" content="#1d4ed8">
+<meta name="description" content="八维定量评价 + AHP/熵值博弈论组合赋权 + 家庭生命周期资产配置 + 条款穿透的理财评估与配置工具">
+<link rel="stylesheet" href="./styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%231d4ed8'/><text x='50' y='50' font-size='62' font-family='sans-serif' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'>￥</text></svg>">
+</head>
+<body>
+<header class="topbar">
+ <div class="topbar-in">
+  <div class="brand">
+    <span class="logo">￥</span>
+    <div>
+      <h1>理财智能评估与配置</h1>
+      <p class="sub">八维评价 · AHP/熵值组合赋权 · 生命周期配置 · LLM条款穿透</p>
+    </div>
+    <span class="spacer"></span>
+    <button id="themeBtn" class="theme-btn" title="切换深色/浅色" aria-label="切换深色或浅色主题">🌙</button>
+  </div>
+  <nav class="tabs">
+    <button class="tab active" data-tab="assess">① 风险测评</button>
+    <button class="tab" data-tab="plan">② 生命周期配置</button>
+    <button class="tab" data-tab="rank">③ 产品评价排行</button>
+    <button class="tab" data-tab="compare">④ 雷达图对比</button>
+    <button class="tab" data-tab="clause">⑤ 条款穿透</button>
+    <button class="tab" data-tab="method">⑥ 方法论</button>
+  </nav>
+ </div>
+</header>
+
+<main>
+  <!-- ① 风险测评 -->
+  <section id="assess" class="panel active">
+    <h2>标准理财风险承受测评</h2>
+    <p class="desc">10 道标准题目自动划分风险层级（C1–C5），作为后续产品匹配推荐的前置硬约束。</p>
+    <div id="quiz" class="quiz"></div>
+    <button id="quizSubmit" class="btn primary">提交测评</button>
+    <div id="quizResult" class="result hidden"></div>
+  </section>
+
+  <!-- ② 生命周期配置 -->
+  <section id="plan" class="panel">
+    <h2>家庭生命周期与目标导向资产配置</h2>
+    <p class="desc">选择您所处的家庭阶段，系统给出「固收:混合:权益」建议配比，并结合测评结果生成组合。</p>
+    <div id="stages" class="stage-grid"></div>
+    <div id="planResult" class="result hidden"></div>
+  </section>
+
+  <!-- ③ 产品评价排行 -->
+  <section id="rank" class="panel">
+    <h2>八维综合评价排行 (S_final)</h2>
+    <p class="desc">综合得分 = 前7维博弈论组合权重加权和 × 第8维条款友好度 λ 乘法惩罚。点击行查看详情与雷达图。</p>
+    <div class="filters">
+      <label>分类
+        <select id="fCat">
+          <option value="">全部</option>
+          <option>固定收益类</option><option>混合类</option><option>权益类</option><option>商品及金融衍生品类</option>
+        </select>
+      </label>
+      <label>风险≤
+        <select id="fPr">
+          <option value="5">PR5</option><option value="4">PR4</option>
+          <option value="3">PR3</option><option value="2">PR2</option><option value="1">PR1</option>
+        </select>
+      </label>
+      <label>条款
+        <select id="fTone">
+          <option value="">全部</option>
+          <option value="green">🟢绿灯</option><option value="yellow">🟡黄灯</option>
+          <option value="orange">🟠橙灯</option><option value="red">🔴红灯</option>
+        </select>
+      </label>
+      <span class="hint" id="rankCount"></span>
+    </div>
+    <div class="table-wrap">
+      <table id="rankTable">
+        <thead><tr>
+          <th>#</th><th>产品名称</th><th>机构</th><th>分类</th><th>风险</th>
+          <th>年化收益</th><th>最大回撤</th><th>综合费率</th><th>条款</th><th>综合分</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ④ 雷达图对比 -->
+  <section id="compare" class="panel">
+    <h2>多产品八维雷达图横向对比</h2>
+    <p class="desc">从排行页勾选产品加入对比栏（最多 4 个），此处叠加雷达图并列出关键指标。</p>
+    <div id="compareBar" class="compare-bar"></div>
+    <div class="radar-area">
+      <canvas id="radar" width="520" height="520"></canvas>
+      <div id="radarLegend" class="legend"></div>
+    </div>
+    <div id="compareTable" class="table-wrap"></div>
+  </section>
+
+  <!-- ⑤ 条款穿透 -->
+  <section id="clause" class="panel">
+    <h2>LLM 条款穿透与金融级防幻觉体系（轻量版）</h2>
+    <p class="desc">粘贴任意产品说明书条款文本，规则引擎对照 5 大类风险条款本体库判定红/橙/黄/绿灯，并折算 λ 乘法惩罚系数。</p>
+    <textarea id="clauseInput" rows="5" placeholder="例：发生巨额赎回时，管理人有权无限期推迟或暂停支付赎回款项……"></textarea>
+    <div class="clause-samples">
+      <span>快速试例：</span>
+      <button class="chip" data-s="red">红灯样例</button>
+      <button class="chip" data-s="orange">橙灯样例</button>
+      <button class="chip" data-s="yellow">黄灯样例</button>
+      <button class="chip" data-s="green">绿灯样例</button>
+    </div>
+    <button id="clauseRun" class="btn primary">穿透分析</button>
+    <div id="clauseResult" class="result hidden"></div>
+    <div id="ontologyBox" class="ontology"></div>
+  </section>
+
+  <!-- ⑥ 方法论 -->
+  <section id="method" class="panel">
+    <h2>方法论与组合赋权明细</h2>
+    <p class="desc">主客观组合赋权：AHP 层次分析（主观）× 熵值法（客观），博弈论求最优组合系数 α*。</p>
+    <div id="methodBox"></div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span id="footMeta"></span>
+  <span>数据来源：中国理财网(chinawealth.com.cn) 字段建模 · 教学演示</span>
+</footer>
+
+<div id="toast" class="toast hidden"></div>
+<script src="./data.js"></script>
+<script src="./shim.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
