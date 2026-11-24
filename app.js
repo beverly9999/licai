@@ -17,7 +17,8 @@ let STATE = { products: [], weights: null, dims: [], lifecycle: null, ontology: 
 const CW_DETAIL = 'https://www.chinawealth.com.cn/zzlc/jsp/lccpinfodetail.jsp?code=';
 const productUrl = (p) => CW_DETAIL + encodeURIComponent(p.code);
 const fmtP1 = (x) => (x * 100).toFixed(1) + '%';
-const fmtRet = (x) => `<span class="${x > 0 ? 'ret-up' : x < 0 ? 'ret-down' : ''}">${fmtP1(x)}</span>`;
+const fmtRet = (x) => x == null ? '—' : `<span class="${x > 0 ? 'ret-up' : x < 0 ? 'ret-down' : ''}">${fmtP1(x)}</span>`;
+const fmtNavCorr = (r) => r == null ? '—' : (r >= 0 ? '+' : '') + (r * 100).toFixed(0) + '%';
 const fmtMoney = (x) => '¥' + (x >= 10000 ? (x / 10000).toFixed(1) + '万' : x.toLocaleString());
 const fmtDays = (x) => (x ? x + '天' : '开放式');
 const numCell = (c) => (c.num ? 'num' : '');
@@ -423,7 +424,7 @@ async function openProduct(code) {
                   <span class="sim-pct">${Math.round(s.sim * 100)}% 相似</span>
                 </div>
                 <div class="hint">${s.p.issuer} · PR${s.p.pr} · ${s.p.category}</div>
-                <div class="sim-metrics">净值联动 ${s.navCorr >= 0 ? '+' : ''}${(s.navCorr * 100).toFixed(0)}% · 特征相似 ${Math.round(s.mSim * 100)}% · 接近维度：${s.close.map((c) => dimLabel(c.dk)).join('、')}</div>
+                <div class="sim-metrics">净值联动 ${fmtNavCorr(s.navCorr)} · 特征相似 ${Math.round(s.mSim * 100)}% · 接近维度：${s.close.map((c) => dimLabel(c.dk)).join('、')}</div>
               </div>`).join('')}
           </div>
         </div>
@@ -459,7 +460,7 @@ function openSimilar(code) {
         <span class="sim-pct">${Math.round(s.sim * 100)}% 相似</span>
       </div>
       <div class="hint">${esc(s.p.issuer)} · PR${s.p.pr} · ${esc(s.p.category)} · 综合分 ${s.p.sFinal100}</div>
-      <div class="sim-metrics">净值联动 ${s.navCorr >= 0 ? '+' : ''}${(s.navCorr * 100).toFixed(0)}% · 特征相似 ${Math.round(s.mSim * 100)}% · 接近维度：${s.close.map((c) => dimLabel(c.dk)).join('、')}</div>
+      <div class="sim-metrics">净值联动 ${fmtNavCorr(s.navCorr)} · 特征相似 ${Math.round(s.mSim * 100)}% · 接近维度：${s.close.map((c) => dimLabel(c.dk)).join('、')}</div>
     </div>`).join('') : '<div class="hint">暂无足够相似的产品。</div>';
   const html = `
     <div style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px" id="modalBg">
