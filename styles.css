@@ -436,46 +436,54 @@ th.no-sort{cursor:default}
   *,*::before{animation:none!important;transition:none!important}
 }
 
-/* ============ 长辈模式（大字版）：放大字体、加大点击区 ============ */
-html[data-elder="true"] body{font-size:19px;line-height:1.7}
-html[data-elder="true"] h1{font-size:23px}
-html[data-elder="true"] h2{font-size:25px}
-html[data-elder="true"] h3{font-size:19px}
-html[data-elder="true"] .sub{font-size:15px}
-html[data-elder="true"] .tab{font-size:16px;padding:11px 15px}
-html[data-elder="true"] .desc{font-size:16px}
-html[data-elder="true"] .hint{font-size:15px}
-html[data-elder="true"] .hero h2{font-size:27px}
-html[data-elder="true"] .hero p{font-size:16px}
-html[data-elder="true"] .hero-chip{font-size:14px;padding:6px 15px}
-html[data-elder="true"] table{font-size:16px}
-html[data-elder="true"] th,html[data-elder="true"] td{padding:14px 15px}
-html[data-elder="true"] thead th{font-size:13px}
-html[data-elder="true"] .btn{font-size:17px;padding:13px 22px}
-html[data-elder="true"] .chip{font-size:15px;padding:9px 16px}
-html[data-elder="true"] .score-pill{font-size:16px;padding:4px 12px}
-html[data-elder="true"] .pr-badge{font-size:13px;padding:2px 10px}
-html[data-elder="true"] .cat-chip{font-size:13px}
-html[data-elder="true"] .qopt{font-size:16px;padding:13px 16px}
-html[data-elder="true"] .qcard .qt{font-size:17px}
-html[data-elder="true"] .stage .sname{font-size:18px}
-html[data-elder="true"] .stage .sgoal{font-size:15px}
-html[data-elder="true"] .stage-icon{font-size:30px}
-html[data-elder="true"] .filters label{font-size:13px}
-html[data-elder="true"] select,html[data-elder="true"] textarea,html[data-elder="true"] input{font-size:16px}
-html[data-elder="true"] .big{font-size:32px}
-html[data-elder="true"] .cmp-add{font-size:14px;padding:7px 12px}
-html[data-elder="true"] .cw-link{font-size:14px}
-html[data-elder="true"] .kv{font-size:15px}
-html[data-elder="true"] .wbar{font-size:14px}
-html[data-elder="true"] .sim-name{font-size:15px}
-html[data-elder="true"] .sim-metrics{font-size:13px}
-html[data-elder="true"] .rc-step b{font-size:15px}
-html[data-elder="true"] .rc-step p{font-size:14px}
-html[data-elder="true"] .why-item b{font-size:15px}
-html[data-elder="true"] .why-item span{font-size:13px}
-html[data-elder="true"] .ds-num{font-size:28px}
-html[data-elder="true"] .ds-label{font-size:14px}
-html[data-elder="true"] .ms-item b{font-size:15px}
-html[data-elder="true"] .ms-item p{font-size:14px}
+/* ============ 长辈模式：高对比配色 + 更大字体 ============ */
+html[data-elder="true"]{
+  --bg:#ffffff; --card:#ffffff; --panel:#f2f2f2;
+  --text:#000000; --text2:#111111; --muted:#333333; --sub:#444444;
+  --brand:#0037a0; --brand2:#002c7e; --accent:#007070;
+  --green:#0a7a0a; --yellow:#b8860b; --orange:#c05500; --red:#c00000;
+  --greenBg:#e6f4e6; --yellowBg:#fff3cd; --orangeBg:#ffe8cc; --redBg:#fde8e8;
+  --line:#aaaaaa; --line2:#888888;
+}
+html[data-elder="true"] body{font-size:22px;line-height:1.8}
+html[data-elder="true"] h1{font-size:26px}
+html[data-elder="true"] h2{font-size:28px}
+html[data-elder="true"] h3{font-size:22px}
+html[data-elder="true"] .sub{font-size:17px}
+html[data-elder="true"] .tab{font-size:19px;padding:13px 18px}
+html[data-elder="true"] .desc{font-size:18px}
+html[data-elder="true"] .hint{font-size:16px}
+html[data-elder="true"] .hero h2{font-size:30px}
+html[data-elder="true"] .hero p{font-size:18px}
+html[data-elder="true"] .hero-chip{font-size:16px;padding:7px 17px}
+html[data-elder="true"] table{font-size:18px}
+html[data-elder="true"] th,html[data-elder="true"] td{padding:16px 17px}
+html[data-elder="true"] thead th{font-size:15px}
+html[data-elder="true"] .btn{font-size:19px;padding:15px 26px}
+html[data-elder="true"] .chip{font-size:17px;padding:10px 18px}
+html[data-elder="true"] .score-pill{font-size:18px;padding:5px 14px}
+html[data-elder="true"] .pr-badge{font-size:14px;padding:3px 11px}
+html[data-elder="true"] .cat-chip{font-size:14px}
+html[data-elder="true"] .qopt{font-size:18px;padding:15px 18px}
+html[data-elder="true"] .qcard .qt{font-size:19px}
+html[data-elder="true"] .stage .sname{font-size:20px}
+html[data-elder="true"] .stage .sgoal{font-size:16px}
+html[data-elder="true"] .stage-icon{font-size:32px}
+html[data-elder="true"] .filters label{font-size:14px}
+html[data-elder="true"] select,html[data-elder="true"] textarea,html[data-elder="true"] input{font-size:18px}
+html[data-elder="true"] .big{font-size:36px}
+html[data-elder="true"] .cmp-add{font-size:16px;padding:8px 14px}
+html[data-elder="true"] .cw-link{font-size:16px}
+html[data-elder="true"] .kv{font-size:17px}
+html[data-elder="true"] .wbar{font-size:15px}
+html[data-elder="true"] .sim-name{font-size:17px}
+html[data-elder="true"] .sim-metrics{font-size:14px}
+html[data-elder="true"] .rc-step b{font-size:17px}
+html[data-elder="true"] .rc-step p{font-size:15px}
+html[data-elder="true"] .why-item b{font-size:17px}
+html[data-elder="true"] .why-item span{font-size:14px}
+html[data-elder="true"] .ds-num{font-size:30px}
+html[data-elder="true"] .ds-label{font-size:15px}
+html[data-elder="true"] .ms-item b{font-size:17px}
+html[data-elder="true"] .ms-item p{font-size:15px}
 
