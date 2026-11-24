@@ -169,14 +169,31 @@ async function init() {
 }
 
 /* ---------- ① 风险测评 ---------- */
+const LEVEL_INFO = {
+  1: { name: '保守型', icon: '🛡️', desc: '极度重视本金安全，几乎不能承受波动，适合低风险产品（PR1，如现金管理类、纯固收类）。', pr: 'PR1', prText: '低风险' },
+  2: { name: '稳健型', icon: '🌿', desc: '追求稳健回报，可承受较小波动，适合中低风险产品（PR1–PR2，固收类为主）。', pr: 'PR1–PR2', prText: '中低风险' },
+  3: { name: '平衡型', icon: '⚖️', desc: '风险与收益兼顾，可承受一定波动，适合中等风险产品（PR1–PR3，固收+少量混合）。', pr: 'PR1–PR3', prText: '中等风险' },
+  4: { name: '成长型', icon: '🚀', desc: '追求较高收益，能承受较大波动，适合中高风险产品（PR1–PR4，可配置混合/权益类）。', pr: 'PR1–PR4', prText: '中高风险' },
+  5: { name: '进取型', icon: '🔥', desc: '追求高收益，能承受大幅波动，适合全部风险等级产品（PR1–PR5，含权益/商品衍生）。', pr: 'PR1–PR5', prText: '高风险' },
+};
+const LEVEL_COLORS = ['#52c41a', '#52c41a', '#a0d911', '#faad14', '#fa8c16', '#f5222d'];
+
+function updateQuizProgress() {
+  const total = STATE.lifecycle.riskQuiz.length;
+  let answered = 0;
+  for (let i = 0; i < total; i++) if ($(`input[name="q${i}"]:checked`)) answered++;
+  $('#quizProgressText').textContent = `已答 ${answered} / ${total}`;
+  $('#quizProgressFill').style.width = (answered / total * 100) + '%';
+}
+
 function buildQuiz() {
   const box = $('#quiz');
   box.innerHTML = STATE.lifecycle.riskQuiz.map((q, i) => `
     <div class="qcard" data-q="${i}">
-      <div class="qt">${i + 1}. ${q.q}</div>
+      <div class="qt"><span class="qnum">${i + 1}</span>${esc(q.q)}</div>
       <div class="qopts">
         ${q.opts.map(([label, val]) => `
-          <label class="qopt"><input type="radio" name="q${i}" value="${val}">${label}</label>
+          <label class="qopt"><input type="radio" name="q${i}" value="${val}">${esc(label)}</label>
         `).join('')}
       </div>
     </div>`).join('');
@@ -184,7 +201,9 @@ function buildQuiz() {
     const card = e.target.closest('.qcard');
     $$('.qopt', card).forEach((o) => o.classList.remove('sel'));
     e.target.closest('.qopt').classList.add('sel');
+    updateQuizProgress();
   }));
+  updateQuizProgress();
 }
 $('#quizSubmit').addEventListener('click', async () => {
   const answers = [];
@@ -195,21 +214,27 @@ $('#quizSubmit').addEventListener('click', async () => {
   }
   const r = await api('/api/assess', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answers }) });
   STATE.cLevel = r.cLevel; STATE.alloc = r.alloc;
+  const L = LEVEL_INFO[r.cLevel] || {};
+  const c = LEVEL_COLORS[r.cLevel];
   const box = $('#quizResult'); box.classList.remove('hidden');
-  const colors = ['#52c41a', '#52c41a', '#a0d911', '#faad14', '#fa8c16', '#f5222d'];
   box.innerHTML = `
-    <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
-      <div>
+    <div class="assess-result">
+      <div class="ar-level">
+        <div class="ar-icon">${L.icon || '📊'}</div>
         <div class="hint">您的风险承受等级</div>
-        <div class="big" style="color:${colors[r.cLevel]}">${r.label}</div>
-        <div class="hint">测评得分 ${r.score}/${r.maxScore}（${fmtPct(r.ratio)}）</div>
+        <div class="big" style="color:${c}">${r.label}</div>
+        <span class="ar-badge" style="background:${c}22;color:${c};border:1px solid ${c}">${L.prText} · 适合 ${L.pr}</span>
       </div>
-      <div style="flex:1;min-width:240px">
-        <div class="hint">系统建议基础配比（固收 : 混合 : 权益）</div>
+      <div class="ar-body">
+        <div class="ar-score">测评得分 <b>${r.score}</b> / ${r.maxScore}　·　得分率 ${fmtPct(r.ratio)}</div>
+        <p class="ar-desc">${L.desc || ''}</p>
+        <div class="hint" style="margin-top:10px">系统建议基础配比（固收 : 混合 : 权益）</div>
         ${allocBar(r.alloc)}
       </div>
     </div>
+    <div class="hint" style="margin-top:12px">该等级将作为「生命周期配置」与「产品推荐」的风险硬约束：系统只推荐风险等级 ≤ ${L.pr} 的产品。</div>
     <button class="btn ghost" style="margin-top:14px" onclick="gotoPlan()">下一步：结合生命周期生成配置 →</button>`;
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   toast('测评完成，风险等级 ' + r.label);
 });
 function gotoPlan() { $('.tab[data-tab="plan"]').click(); }
