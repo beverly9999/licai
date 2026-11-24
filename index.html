@@ -28,11 +28,20 @@
     <button class="tab" data-tab="compare">④ 雷达图对比</button>
     <button class="tab" data-tab="clause">⑤ 条款穿透</button>
     <button class="tab" data-tab="method">⑥ 方法论</button>
+    <button class="tab" data-tab="research">⑦ 研究路线</button>
   </nav>
  </div>
 </header>
 
 <main>
+  <section class="hero">
+    <div class="hero-in">
+      <h2>看懂每一款理财，再决定买不买</h2>
+      <p>把「收益 · 风险 · 费率 · 流动性 · 条款」摊开量化比较：支持维度排序、自选指标、相似产品推荐，并可一键跳转理财网核验登记编码。</p>
+      <div class="hero-chips" id="heroStats"></div>
+    </div>
+  </section>
+
   <!-- ① 风险测评 -->
   <section id="assess" class="panel active">
     <h2>标准理财风险承受测评</h2>
@@ -74,14 +83,23 @@
           <option value="orange">🟠橙灯</option><option value="red">🔴红灯</option>
         </select>
       </label>
+      <div class="col-sel">
+        <button id="colBtn" class="col-btn" type="button" title="选择展示/排序的维度">⚙ 维度列</button>
+        <div id="colPicker" class="col-picker hidden"></div>
+      </div>
       <span class="hint" id="rankCount"></span>
     </div>
+    <div class="view-presets">
+      <span class="hint">客户自选维度：</span>
+      <button class="chip" data-preset="all">全部</button>
+      <button class="chip" data-preset="return">收益视角</button>
+      <button class="chip" data-preset="risk">风险视角</button>
+      <button class="chip" data-preset="cost">成本视角</button>
+    </div>
+    <p class="hint" style="margin-bottom:10px">点击表头任意一列即按该维度排序（含「综合分」评分排序，再次点击切换升/降序）；「维度列」与上方视角可自选要展示的收益/风险/成本等指标。</p>
     <div class="table-wrap">
       <table id="rankTable">
-        <thead><tr>
-          <th>#</th><th>产品名称</th><th>机构</th><th>分类</th><th>风险</th>
-          <th>年化收益</th><th>最大回撤</th><th>综合费率</th><th>条款</th><th>综合分</th><th></th>
-        </tr></thead>
+        <thead></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -122,11 +140,19 @@
     <p class="desc">主客观组合赋权：AHP 层次分析（主观）× 熵值法（客观），博弈论求最优组合系数 α*。</p>
     <div id="methodBox"></div>
   </section>
+
+  <!-- ⑦ 研究路线 -->
+  <section id="research" class="panel">
+    <h2>两个研究问题：把股票研究范式迁移到银行理财</h2>
+    <p class="desc">理财规模比股票更大、覆盖人群更广、研究的人更少，且资管公司的实际业务更多与理财（而非直投）相关。本工具即是两条主线的「最小可用底座」：前端八维评价对应问题一，条款穿透与相似聚类对应问题二的文本因子。</p>
+    <div id="researchBox"></div>
+  </section>
 </main>
 
 <footer class="foot">
   <span id="footMeta"></span>
-  <span>数据来源：中国理财网(chinawealth.com.cn) 字段建模 · 教学演示</span>
+  <span id="footSource">数据来源：中国理财网</span>
+  <span>产品登记编码可在理财网核验；本页数据仅供参考，不构成投资建议</span>
 </footer>
 
 <div id="toast" class="toast hidden"></div>

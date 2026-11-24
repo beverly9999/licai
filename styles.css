@@ -48,6 +48,24 @@ h4{font-size:14px;font-weight:650}
 .num{text-align:right;font-variant-numeric:tabular-nums}
 a{color:var(--brand)}
 
+/* ============ 首屏 hero ============ */
+.hero{
+  background:linear-gradient(140deg,var(--brand),var(--accent));
+  color:#fff;border-radius:var(--radius);padding:24px 26px;margin-bottom:20px;
+  box-shadow:var(--shadowUp);position:relative;overflow:hidden;
+}
+.hero::after{
+  content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;
+  border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none;
+}
+.hero h2{font-size:22px;font-weight:800;letter-spacing:-.01em;color:#fff}
+.hero p{opacity:.92;font-size:13px;margin-top:6px;max-width:64ch;position:relative;z-index:1}
+.hero-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;position:relative;z-index:1}
+.hero-chip{
+  background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);
+  padding:5px 13px;border-radius:20px;font-size:12px;font-weight:600;color:#fff;
+}
+
 /* ============ 顶栏 ============ */
 .topbar{
   position:sticky;top:0;z-index:30;
@@ -170,6 +188,8 @@ tbody tr:hover{background:var(--panel)}
   background:var(--brand);color:#fff;padding:3px 10px;
   border-radius:14px;font-weight:700;font-variant-numeric:tabular-nums;
 }
+.ret-up{color:var(--green);font-weight:650}
+.ret-down{color:var(--red);font-weight:650}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;flex:none}
 .dot.green{background:var(--green)}.dot.yellow{background:var(--yellow)}
 .dot.orange{background:var(--orange)}.dot.red{background:var(--red)}
@@ -254,6 +274,73 @@ tbody tr:hover{background:var(--panel)}
 }
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
 
+/* ============ 可排序表头 / 维度列 ============ */
+.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+.sortable:hover{color:var(--brand)}
+.sortable .sa{color:var(--brand);font-size:10px}
+.col-sel{position:relative}
+.col-btn{
+  background:var(--card);border:1px solid var(--line2);color:var(--text2);
+  border-radius:9px;padding:8px 13px;cursor:pointer;font-size:13px;font-family:inherit;
+  font-weight:600;transition:.15s;
+}
+.col-btn:hover{border-color:var(--brand);color:var(--brand)}
+.col-picker{
+  position:absolute;top:calc(100% + 6px);left:0;z-index:20;
+  background:var(--card);border:1px solid var(--line2);border-radius:11px;
+  box-shadow:var(--shadowUp);padding:9px;min-width:200px;max-height:320px;overflow:auto;
+}
+.cp-title{font-size:11px;color:var(--sub);font-weight:700;padding:3px 8px 6px;letter-spacing:.04em}
+.cp-opt{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--text2)}
+.cp-opt:hover{background:var(--panel)}
+.cp-opt input{accent-color:var(--brand)}
+
+/* ============ 理财网合规链接 ============ */
+.cw-link{
+  color:var(--accent);font-size:12px;text-decoration:none;font-weight:600;
+  border-bottom:1px dashed var(--accent);margin-left:8px;white-space:nowrap;
+}
+.cw-link:hover{color:var(--brand);border-bottom-color:var(--brand)}
+.cw-big{font-size:13px;margin-left:0}
+.cw-big-btn{
+  display:inline-flex;align-items:center;gap:6px;margin-top:8px;
+  background:var(--brandSoft);color:var(--brand);border:1px solid var(--brand);
+  border-radius:9px;padding:7px 14px;font-size:13px;font-weight:650;
+  text-decoration:none;transition:.15s;
+}
+.cw-big-btn:hover{background:var(--brand);color:#fff}
+
+/* ============ 相似产品（简单聚类） ============ */
+.sim-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.sim-item{
+  border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;
+  background:var(--card2);transition:.13s;
+}
+.sim-item:hover{border-color:var(--brand);background:var(--brandSoft)}
+.sim-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.sim-name{font-weight:650;font-size:13px}
+.sim-pct{color:var(--brand);font-weight:700;font-size:12px;white-space:nowrap}
+.sim-metrics{margin-top:3px;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* ============ 客户自选维度视角 ============ */
+.view-presets{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.view-presets .hint{font-weight:600;color:var(--muted)}
+.view-presets .chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+
+/* 当前排序列高亮 */
+th.active-sort{color:var(--brand);background:var(--brandSoft)}
+th.no-sort{cursor:default}
+
+/* 登记编码等宽 */
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--muted);letter-spacing:.02em}
+
+/* ============ 研究路线 ============ */
+.research-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.research-grid .mcard h3{margin-bottom:6px}
+.research-ol{padding-left:20px;color:var(--text2);font-size:13px;display:grid;gap:8px;margin-top:10px}
+.why-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px;font-size:13px;color:var(--text2)}
+.why-grid div{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+
 /* ============ 响应式 ============ */
 @media(max-width:760px){
   main{padding:20px 15px 8px}
@@ -262,6 +349,7 @@ tbody tr:hover{background:var(--panel)}
   h2{font-size:18px}
   .qopts{grid-template-columns:1fr}
   .method-grid{grid-template-columns:1fr}
+  .research-grid{grid-template-columns:1fr}
   .stage-grid,.ontology{grid-template-columns:1fr}
   .radar-area{padding:14px;gap:16px}
   .brand h1{font-size:16px}

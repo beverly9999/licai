@@ -4,7 +4,7 @@
 var D = window.__DATA__;
 var byCode = {};
 D.products.forEach(function(p){ byCode[p.code] = p; });
-function slim(p){ var o={}; for(var k in p){ if(k!=='nav'&&k!=='z'&&k!=='raw') o[k]=p[k]; } return o; }
+function slim(p){ var o={}; for(var k in p){ if(k!=='nav'&&k!=='raw') o[k]=p[k]; } return o; }
 function round(x,n){ n=n==null?4:n; return Math.round(x*Math.pow(10,n))/Math.pow(10,n); }
 
 // 风险问卷 -> C 等级 (同 server.js assessRisk)
@@ -90,7 +90,7 @@ window.__STATIC_API__ = function(u, opt){
   var out;
   switch (pathOnly) {
     case '/api/products':
-      out = { meta:D.meta, weights:D.weights, dimensions:D.dimensions, products:D.products.map(slim) }; break;
+      out = { meta:D.meta, weights:D.weights, dimensions:D.dimensions, similarity:D.similarity, products:D.products.map(slim) }; break;
     case '/api/product':
       out = byCode[qs.code] || { error:'not found' }; break;
     case '/api/weights':

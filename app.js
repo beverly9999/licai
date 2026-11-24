@@ -4,11 +4,101 @@ const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const api = (u, opt) => window.__STATIC_API__(u, opt);
 const fmtPct = (x) => (x * 100).toFixed(2) + '%';
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const toneColor = { green: '#22c55e', yellow: '#eab308', orange: '#f97316', red: '#ef4444' };
 const toneLabel = { green: '🟢 绿灯 (安全)', yellow: '🟡 黄灯 (关注)', orange: '🟠 橙灯 (中高)', red: '🔴 红灯 (高危)' };
 
 let STATE = { products: [], weights: null, dims: [], lifecycle: null, ontology: null,
-  cLevel: null, alloc: null, compare: [] };
+  cLevel: null, alloc: null, compare: [], sort: { key: 'sFinal100', dir: -1 }, cols: new Set(), preset: null };
+
+/* ---------- ③ 排行页：可展示 / 可排序维度 ---------- */
+// 理财网产品详情页路径（以站点实测为准；真实数据接入时在此处一次性校准即可）
+const CW_DETAIL = 'https://www.chinawealth.com.cn/zzlc/jsp/lccpinfodetail.jsp?code=';
+const productUrl = (p) => CW_DETAIL + encodeURIComponent(p.code);
+const fmtP1 = (x) => (x * 100).toFixed(1) + '%';
+const fmtRet = (x) => `<span class="${x > 0 ? 'ret-up' : x < 0 ? 'ret-down' : ''}">${fmtP1(x)}</span>`;
+const fmtMoney = (x) => '¥' + (x >= 10000 ? (x / 10000).toFixed(1) + '万' : x.toLocaleString());
+const fmtDays = (x) => (x ? x + '天' : '开放式');
+const numCell = (c) => (c.num ? 'num' : '');
+
+// get: 取值；fmt: 展示(值, 产品)；dir: 默认排序方向；default: 默认展示；num: 右对齐
+const DIM_NAMES = ['收益水平', '风险水平', '期限流动性', '费率成本', '发行机构信用', '业绩稳定性', '投资门槛', '条款友好度'];
+const COLUMNS = [
+  { key: 'sFinal100', label: '综合分', num: true, dir: -1, default: true,
+    get: (p) => p.sFinal100, fmt: (x) => '<span class="score-pill">' + x + '</span>' },
+  { key: 'name', label: '产品名称', default: true, get: (p) => p.name, fmt: (x) => x },
+  { key: 'issuer', label: '机构', default: true, get: (p) => p.issuer, fmt: (x) => x },
+  { key: 'category', label: '分类', default: true, get: (p) => p.category, fmt: (x) => x },
+  { key: 'pr', label: '风险', num: true, dir: 1, default: true, get: (p) => p.pr, fmt: (x) => 'PR' + x },
+  { key: 'r1m', label: '近1月收益', num: true, dir: -1, default: true, get: (p) => p.r1m, fmt: fmtRet },
+  { key: 'annRet', label: '年化收益', num: true, dir: -1, default: true, get: (p) => p.annRet, fmt: fmtRet },
+  { key: 'maxDD', label: '最大回撤', num: true, dir: 1, default: true, get: (p) => p.maxDD, fmt: fmtP1 },
+  { key: 'totalFeeRate', label: '综合费率', num: true, dir: 1, default: true, get: (p) => p.totalFeeRate, fmt: fmtP1 },
+  { key: 'lambda', label: '条款', num: true, dir: 1, default: true, get: (p) => p.lambda,
+    fmt: (x, p) => '<span class="dot ' + p.clause.tone + '"></span>' + x.toFixed(2) },
+  { key: 'r3m', label: '近3月收益', num: true, dir: -1, get: (p) => p.r3m, fmt: fmtRet },
+  { key: 'r6m', label: '近6月收益', num: true, dir: -1, get: (p) => p.r6m, fmt: fmtRet },
+  { key: 'r1y', label: '近1年收益', num: true, dir: -1, get: (p) => p.r1y, fmt: fmtRet },
+  { key: 'benchMid', label: '业绩基准', num: true, dir: -1, get: (p) => p.benchMid, fmt: fmtP1 },
+  { key: 'annVol', label: '年化波动', num: true, dir: 1, get: (p) => p.annVol, fmt: fmtP1 },
+  { key: 'sharpe', label: '夏普比率', num: true, dir: -1, get: (p) => p.sharpe, fmt: (x) => x.toFixed(2) },
+  { key: 'posMonthRatio', label: '正收益月占比', num: true, dir: -1, get: (p) => p.posMonthRatio, fmt: fmtP1 },
+  { key: 'minInvest', label: '起购金额', num: true, dir: 1, get: (p) => p.minInvest, fmt: fmtMoney },
+  { key: 'redeemT', label: '赎回到账', num: true, dir: 1, get: (p) => p.redeemT, fmt: (x) => 'T+' + x },
+  { key: 'closedDays', label: '封闭期', num: true, dir: 1, get: (p) => p.closedDays, fmt: fmtDays },
+  ...DIM_NAMES.map((nm, i) => ({
+    key: 'D' + (i + 1), label: '维度·' + nm, num: true, dir: -1,
+    get: (p) => p.z['D' + (i + 1)], fmt: (x) => x.toFixed(2),
+  })),
+];
+
+/* 客户自选维度视角：一键切换要展示/排序的指标组合（综合分 + 产品名始终保留） */
+const PRESETS = {
+  return: ['sFinal100', 'name', 'r1m', 'r3m', 'r6m', 'r1y', 'annRet', 'benchMid', 'sharpe'],
+  risk:   ['sFinal100', 'name', 'pr', 'annVol', 'maxDD', 'sharpe', 'posMonthRatio', 'lambda'],
+  cost:   ['sFinal100', 'name', 'totalFeeRate', 'minInvest', 'closedDays', 'redeemT', 'lambda'],
+};
+
+/* ---------- 相似产品（聚类：特征马氏距离 + 净值协方差/相关系数） ---------- */
+const dimLabel = (dk) => (STATE.dims.find((d) => d.key === dk) || {}).name || dk;
+function mahalanobisSim(a, b) {
+  // 用预计算的马氏逆协方差；缺失时退化为欧氏距离
+  const sim = STATE.similarity, keys = sim && sim.keys ? sim.keys : Object.keys(a);
+  const inv = sim && sim.invFeatureCov;
+  if (!inv) {
+    let s = 0; for (const k of keys) s += (a[k] - b[k]) ** 2;
+    return 1 / (1 + Math.sqrt(s));
+  }
+  const d = keys.map((k) => a[k] - b[k]);
+  let q = 0;
+  for (let i = 0; i < d.length; i++) for (let j = 0; j < d.length; j++) q += d[i] * inv[i][j] * d[j];
+  return 1 / (1 + Math.sqrt(Math.max(0, q)));
+}
+// 从锯齿上三角相关系数数组取 corr(i,j)
+function corrAt(navCorr, i, j) {
+  if (!navCorr) return null;
+  if (i === j) return 1;
+  return i < j ? navCorr[i][j - i - 1] : navCorr[j][i - j - 1];
+}
+function similarProducts(code, k = 5) {
+  const p = STATE.products.find((x) => x.code === code);
+  if (!p) return [];
+  const idx = STATE.products.indexOf(p);
+  const dkeys = STATE.dims.map((d) => d.key);
+  const navCorr = STATE.similarity ? STATE.similarity.navCorr : null;
+  return STATE.products.filter((x) => x.code !== code).map((x) => {
+    const mSim = mahalanobisSim(p.z, x.z);                       // 特征马氏相似度 ∈ (0,1]
+    const jx = STATE.products.indexOf(x);
+    const r = corrAt(navCorr, idx, jx);                          // 净值相关系数 ∈ [-1,1]，缺省 null
+    const navSim = r == null ? null : (r + 1) / 2;               // 归一化联动相似 ∈ [0,1]
+    const sim = Math.round(((navSim == null ? mSim : 0.5 * mSim + 0.5 * navSim)) * 1000) / 1000;
+    const close = dkeys
+      .map((dk) => ({ dk, diff: Math.abs(p.z[dk] - x.z[dk]) }))
+      .sort((a, b) => a.diff - b.diff).slice(0, 3);
+    return { p: x, sim, mSim, navCorr: r, close };
+  }).sort((a, b) => b.sim - a.sim).slice(0, k);
+}
 
 /* ---------- 主题切换（浅色/深色，canvas 配色跟随） ---------- */
 const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -49,10 +139,16 @@ async function init() {
   STATE.products = prod.products;
   STATE.weights = prod.weights;
   STATE.dims = prod.dimensions;
+  STATE.similarity = prod.similarity || null;
   STATE.lifecycle = life;
   STATE.ontology = ont;
   $('#footMeta').textContent = `已加载 ${prod.products.length} 条产品 · α*=${prod.weights.alpha} · AHP CR=${prod.weights.ahpCheck.CR}（一致性${prod.weights.ahpCheck.consistent ? '通过' : '未过'}）`;
-  buildQuiz(); buildStages(); buildRank(); buildOntology(); buildMethod();
+  const src = (prod.meta && prod.meta.source) ? prod.meta.source : '中国理财网';
+  $('#footSource').textContent = `数据来源：${src} · 非销售用途`;
+  $('#heroStats').innerHTML = [
+    `已收录 ${prod.products.length} 款产品`, '八维定量评价', '组合赋权 + 条款穿透', '相似产品推荐', '数据持续扩充中',
+  ].map((t) => `<span class="hero-chip">${t}</span>`).join('');
+  buildQuiz(); buildStages(); buildRank(); buildOntology(); buildMethod(); buildResearch();
 }
 
 /* ---------- ① 风险测评 ---------- */
@@ -176,27 +272,78 @@ function metric(label, val) {
 /* ---------- ③ 产品评价排行 ---------- */
 function buildRank() {
   ['fCat', 'fPr', 'fTone'].forEach((id) => $('#' + id).addEventListener('change', renderRank));
+  $('#colBtn').addEventListener('click', () => $('#colPicker').classList.toggle('hidden'));
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.col-sel')) $('#colPicker').classList.add('hidden');
+  });
+  $$('.view-presets .chip').forEach((c) => c.addEventListener('click', () => {
+    STATE.preset = c.dataset.preset === 'all' ? null : c.dataset.preset;
+    renderPresets();
+    renderRank();
+  }));
+  buildColPicker();
+  renderPresets();
   renderRank();
+}
+function renderPresets() {
+  $$('.view-presets .chip').forEach((c) => {
+    const on = c.dataset.preset === 'all' ? !STATE.preset : STATE.preset === c.dataset.preset;
+    c.classList.toggle('on', on);
+  });
+}
+function buildColPicker() {
+  const opts = COLUMNS.filter((c) => !c.default);
+  $('#colPicker').innerHTML = '<div class="cp-title">选择展示维度</div>' +
+    opts.map((c) => `<label class="cp-opt"><input type="checkbox" value="${c.key}" ${STATE.cols.has(c.key) ? 'checked' : ''}> ${c.label}</label>`).join('');
+  $$('#colPicker input').forEach((inp) => inp.addEventListener('change', () => {
+    inp.checked ? STATE.cols.add(inp.value) : STATE.cols.delete(inp.value);
+    renderRank();
+  }));
+}
+function visibleCols() {
+  if (STATE.preset && PRESETS[STATE.preset]) {
+    const keys = PRESETS[STATE.preset];
+    return COLUMNS.filter((c) => keys.includes(c.key));
+  }
+  return COLUMNS.filter((c) => c.default || STATE.cols.has(c.key));
 }
 function currentFiltered() {
   const cat = $('#fCat').value, pr = +$('#fPr').value, tone = $('#fTone').value;
-  return STATE.products
-    .filter((p) => (!cat || p.category === cat) && p.pr <= pr && (!tone || p.clause.tone === tone))
-    .sort((a, b) => b.sFinal - a.sFinal);
+  const list = STATE.products.filter(
+    (p) => (!cat || p.category === cat) && p.pr <= pr && (!tone || p.clause.tone === tone));
+  const c = COLUMNS.find((x) => x.key === STATE.sort.key);
+  if (!c) return list;
+  return list.slice().sort((a, b) => {
+    const va = c.get(a), vb = c.get(b);
+    return (va < vb ? -1 : va > vb ? 1 : 0) * STATE.sort.dir;
+  });
+}
+function sortBy(key) {
+  if (STATE.sort.key === key) STATE.sort.dir *= -1;
+  else { const c = COLUMNS.find((x) => x.key === key); STATE.sort = { key, dir: c && c.dir ? c.dir : -1 }; }
+  renderRank();
 }
 function renderRank() {
   const list = currentFiltered();
   $('#rankCount').textContent = `共 ${list.length} 款`;
+  const cols = visibleCols();
+  $('#rankTable thead').innerHTML = '<tr><th>#</th>' + cols.map((c) => {
+    const active = STATE.sort.key === c.key;
+    const arrow = active ? (STATE.sort.dir === -1 ? ' <span class="sa">▾</span>' : ' <span class="sa">▴</span>') : '';
+    return `<th class="sortable ${active ? 'active-sort' : ''}" data-key="${c.key}" title="点击按「${c.label}」排序">${c.label}${arrow}</th>`;
+  }).join('') + '<th class="no-sort"></th></tr>';
+  $$('#rankTable thead .sortable').forEach((th) => th.addEventListener('click', () => sortBy(th.dataset.key)));
   $('#rankTable tbody').innerHTML = list.map((p, i) => `
     <tr onclick="openProduct('${p.code}')">
-      <td>${i + 1}</td>
-      <td>${p.name}</td><td>${p.issuer}</td><td>${p.category}</td><td>PR${p.pr}</td>
-      <td class="num">${fmtPct(p.annRet)}</td><td class="num">${fmtPct(p.maxDD)}</td>
-      <td class="num">${fmtPct(p.totalFeeRate)}</td>
-      <td><span class="dot ${p.clause.tone}"></span>${p.lambda}</td>
-      <td class="num"><span class="score-pill">${p.sFinal100}</span></td>
-      <td><button class="cmp-add ${STATE.compare.includes(p.code) ? 'on' : ''}"
-        onclick="event.stopPropagation();toggleCompare('${p.code}',this)">${STATE.compare.includes(p.code) ? '✓已选' : '+对比'}</button></td>
+      <td class="num">${i + 1}</td>
+      ${cols.map((c) => `<td class="${numCell(c)}">${c.fmt(c.get(p), p)}</td>`).join('')}
+      <td style="white-space:nowrap">
+        <button class="cmp-add" onclick="event.stopPropagation();openSimilar('${p.code}')" title="点此查看与本品相似的产品（简单聚类）">🔍 找相似</button>
+        <button class="cmp-add ${STATE.compare.includes(p.code) ? 'on' : ''}"
+          onclick="event.stopPropagation();toggleCompare('${p.code}',this)">${STATE.compare.includes(p.code) ? '✓已选' : '+对比'}</button>
+        <a class="cw-link" href="${productUrl(p)}" target="_blank" rel="noopener noreferrer"
+          onclick="event.stopPropagation()" title="点此进入理财网产品介绍页面（合规核验）">理财网核验 ↗</a>
+      </td>
     </tr>`).join('');
 }
 
@@ -216,6 +363,7 @@ async function openProduct(code) {
   const p = await api('/api/product?code=' + encodeURIComponent(code));
   const dims = STATE.dims;
   const rows = dims.map((d) => `<div class="kv"><span>${d.key} ${d.name}${d.positive ? '' : '（负向）'}</span><span>标准化 ${(p.z[d.key]).toFixed(3)}</span></div>`).join('');
+  const sims = similarProducts(code, 5);
   const clauseHits = p.clause.hits.length
     ? p.clause.hits.map((h) => `<li><b>${h.name}</b>：命中「${h.matched.join('、')}」— ${h.hint}</li>`).join('')
     : '<li>未命中显性风险条款本体，判定为内置参考等级。</li>';
@@ -223,7 +371,7 @@ async function openProduct(code) {
     <div style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px" id="modalBg">
       <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;max-width:640px;width:100%;max-height:88vh;overflow:auto;padding:22px">
         <div style="display:flex;justify-content:space-between;align-items:start">
-          <div><h2>${p.name}</h2><div class="hint">${p.issuer} · ${p.issuerType} · ${p.category} · ${p.opMode}</div></div>
+          <div><h2>${p.name}</h2><div class="hint">${p.issuer} · ${p.issuerType} · ${p.category} · ${p.opMode}</div><div class="hint" style="margin-top:3px">登记编码：<span class="mono">${esc(p.code)}</span></div><a class="cw-big-btn" href="${productUrl(p)}" target="_blank" rel="noopener noreferrer">🔗 点此进入理财网产品介绍页面（核验登记编码）</a></div>
           <button class="btn ghost" onclick="document.getElementById('modalBg').remove()">关闭</button>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0">
@@ -245,6 +393,23 @@ async function openProduct(code) {
           <ul style="margin:8px 0 0 18px;font-size:13px;color:var(--muted)">${clauseHits}</ul>
           <div style="margin-top:8px;font-size:12px;color:var(--sub)">原文摘录：${(p.clauses || []).join(' / ')}</div>
         </div>
+        <div class="mcard" style="margin-top:12px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px">
+            <b>相似产品推荐（聚类）</b>
+            <span class="hint">特征马氏距离 + 净值协方差（相关系数）</span>
+          </div>
+          <div class="sim-list">
+            ${sims.map((s) => `
+              <div class="sim-item" onclick="openProduct('${s.p.code}')">
+                <div class="sim-row">
+                  <span class="sim-name">${s.p.name}</span>
+                  <span class="sim-pct">${Math.round(s.sim * 100)}% 相似</span>
+                </div>
+                <div class="hint">${s.p.issuer} · PR${s.p.pr} · ${s.p.category}</div>
+                <div class="sim-metrics">净值联动 ${s.navCorr >= 0 ? '+' : ''}${(s.navCorr * 100).toFixed(0)}% · 特征相似 ${Math.round(s.mSim * 100)}% · 接近维度：${s.close.map((c) => dimLabel(c.dk)).join('、')}</div>
+              </div>`).join('')}
+          </div>
+        </div>
         <canvas id="miniNav" width="580" height="140" style="width:100%;background:var(--panel2);border-radius:8px"></canvas>
         <div class="hint" style="margin-top:4px">近1年单位净值走势</div>
         <details style="margin-top:12px"><summary style="cursor:pointer">八维标准化得分明细</summary>${rows}</details>
@@ -264,6 +429,39 @@ function addToCompareFromModal(code) {
   $('#modalBg')?.remove(); renderRank(); toast(`对比栏 ${STATE.compare.length}/4`);
 }
 window.addToCompareFromModal = addToCompareFromModal;
+
+/* ---------- 找相似（简单聚类：八维余弦相似度） ---------- */
+function openSimilar(code) {
+  const p = STATE.products.find((x) => x.code === code);
+  if (!p) return;
+  const sims = similarProducts(code, 8);
+  const list = sims.length ? sims.map((s) => `
+    <div class="sim-item" onclick="openProduct('${s.p.code}')">
+      <div class="sim-row">
+        <span class="sim-name">${esc(s.p.name)}</span>
+        <span class="sim-pct">${Math.round(s.sim * 100)}% 相似</span>
+      </div>
+      <div class="hint">${esc(s.p.issuer)} · PR${s.p.pr} · ${esc(s.p.category)} · 综合分 ${s.p.sFinal100}</div>
+      <div class="sim-metrics">净值联动 ${s.navCorr >= 0 ? '+' : ''}${(s.navCorr * 100).toFixed(0)}% · 特征相似 ${Math.round(s.mSim * 100)}% · 接近维度：${s.close.map((c) => dimLabel(c.dk)).join('、')}</div>
+    </div>`).join('') : '<div class="hint">暂无足够相似的产品。</div>';
+  const html = `
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px" id="modalBg">
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;max-width:640px;width:100%;max-height:88vh;overflow:auto;padding:22px">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <div>
+            <h2>🔍 相似产品推荐</h2>
+            <div class="hint" style="margin-top:4px">焦点产品：<b>${esc(p.name)}</b>（${esc(p.issuer)} · PR${p.pr} · ${esc(p.category)}）</div>
+            <div class="hint">方法：特征马氏距离 + 净值协方差（相关系数）聚类，仅作选品参考，非销售建议。</div>
+          </div>
+          <button class="btn ghost" onclick="document.getElementById('modalBg').remove()">关闭</button>
+        </div>
+        <div class="sim-list" style="margin-top:14px">${list}</div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+  $('#modalBg').addEventListener('click', (e) => { if (e.target.id === 'modalBg') e.target.remove(); });
+}
+window.openSimilar = openSimilar;
 
 /* ---------- 净值折线 ---------- */
 function drawNav(cv, nav) {
@@ -451,6 +649,45 @@ function buildMethod() {
       <h3>混合评价模型 HWEM 计分链</h3>
       <div class="formula">S_final = ( Σₖ₌₁⁷ wₖ · Zₖ ) × λ_LLM　（λ ∈ {红0.65, 橙0.80, 黄0.92, 绿1.00}）</div>
       <div class="hint">前 7 维为客观定量指标的组合加权得分，第 8 维「条款友好度」经 LLM/规则穿透转化为语义风险惩罚系数 λ，以乘法形式对最终得分实施「一票降权」。</div>
+    </div>`;
+}
+
+/* ---------- ⑦ 研究路线 ---------- */
+function buildResearch() {
+  const n = STATE.products.length;
+  $('#researchBox').innerHTML = `
+    <div class="research-grid">
+      <div class="mcard">
+        <h3>问题一 · 离散金融的落地</h3>
+        <div class="hint">如何把传统数理金融真正用于「有限类」理财（离散监管分类 + 离散风险等级 + 离散流动性锁定）？</div>
+        <ol class="research-ol">
+          <li><b>嵌入层</b>：把离散类别（固收/混合/权益/商品衍生、PR1–5）映射到由净值序列估计的连续因子坐标（μ、σ、MDD、β）。—— 本工具的「八维标准化 + 相似聚类（特征马氏距离 + 净值协方差）」即其最小版本。</li>
+          <li><b>优化层</b>：在协方差矩阵上解均值-方差 / 风险预算，并把风险硬约束（PR≤C）、封闭期锁定、持有期错配显式写进约束集。</li>
+          <li><b>整数层</b>：混合整数规划输出「可落地产品清单 + 金额 + 再平衡日历」，而非连续权重。</li>
+        </ol>
+        <div class="formula">min wᵀΣw　s.t. wᵀμ ≥ μ₀, Σw=1, xᵢ∈{0,1}, wᵢ≤M·xᵢ, cLevel≤C</div>
+      </div>
+      <div class="mcard">
+        <h3>问题二 · 文本因子预测风险与收益</h3>
+        <div class="hint">说明书/公告等描述能否预测理财的风险与收益？（对应股票研究的「多因子 / 文本因子」主线）</div>
+        <ol class="research-ol">
+          <li><b>结构化因子</b>：费率、流动性、机构信用 → 横截面回归 rᵢ=α+ΣβₖFᵢₖ+εᵢ。</li>
+          <li><b>规则文本因子</b>：条款风险 λ（本工具条款穿透已落地）→ 升级为语义 λ。</li>
+          <li><b>语义文本因子</b>：复用 FinGPT-Decode 对说明书做风险语义嵌入，检验对收益/回撤的预测力。</li>
+        </ol>
+        <div class="hint" style="margin-top:8px">两条主线共用同一套数据底座（结构化字段 + 说明书文本），本页产品数据与条款文本即语料起点。</div>
+      </div>
+    </div>
+    <div class="mcard" style="margin-top:16px">
+      <h3>为什么把研究放在「理财」而不是股票</h3>
+      <div class="why-grid">
+        <div>① 规模更大：银行理财存续规模超过股票流通市值，是更大的资产池。</div>
+        <div>② 人群更广：覆盖更多普通投资者，研究的社会意义更大。</div>
+        <div>③ 有特殊性：离散分类、封闭期锁定、条款风险 λ 是理财独有、股票没有。</div>
+        <div>④ 研究更少：文本因子研究集中在股票财报/研报，理财说明书基本空白。</div>
+        <div>⑤ 业务更近：资管公司大量业务是理财代销/管理，而非直投选股。</div>
+      </div>
+      <div class="hint" style="margin-top:10px">当前库内 ${n} 款产品（4 大类 + 4 级条款灯 + 净值序列 + 说明书语料）。数据持续扩充计划与完整研究路线见项目 docs/（research-plan.md / data-collection-plan.md）。</div>
     </div>`;
 }
 
