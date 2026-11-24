@@ -6,7 +6,7 @@ const api = (u, opt) => window.__STATIC_API__(u, opt);
 const fmtPct = (x) => (x * 100).toFixed(2) + '%';
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const toneColor = { green: '#22c55e', yellow: '#eab308', orange: '#f97316', red: '#ef4444' };
+const toneColor = { green: '#8a9a7b', yellow: '#b08e5a', orange: '#b58b6e', red: '#b58383' };
 const toneLabel = { green: '🟢 绿灯 (安全)', yellow: '🟡 黄灯 (关注)', orange: '🟠 橙灯 (中高)', red: '🔴 红灯 (高危)' };
 
 let STATE = { products: [], weights: null, dims: [], lifecycle: null, ontology: null,
@@ -185,7 +185,7 @@ $('#quizSubmit').addEventListener('click', async () => {
   const r = await api('/api/assess', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answers }) });
   STATE.cLevel = r.cLevel; STATE.alloc = r.alloc;
   const box = $('#quizResult'); box.classList.remove('hidden');
-  const colors = ['#22c55e', '#22c55e', '#84cc16', '#eab308', '#f97316', '#ef4444'];
+  const colors = ['#8a9a7b', '#8a9a7b', '#a3b18a', '#b08e5a', '#b58b6e', '#b58383'];
   box.innerHTML = `
     <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
       <div>
@@ -492,7 +492,7 @@ function drawNav(cv, nav) {
     const y = H - pad - (H - 2 * pad) * (v - min) / span;
     i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
   });
-  ctx.strokeStyle = nav[nav.length - 1] >= nav[0] ? '#22c55e' : '#ef4444';
+  ctx.strokeStyle = nav[nav.length - 1] >= nav[0] ? '#8a9a7b' : '#b58383';
   ctx.lineWidth = 2; ctx.stroke();
 }
 
@@ -705,8 +705,20 @@ function buildMethod() {
 
 /* ---------- ⑦ 研究路线 ---------- */
 function buildResearch() {
-  const n = STATE.products.length;
+  const P = STATE.products;
+  const n = P.length;
+  const cats = new Set(P.map((p) => p.category)).size;
+  const prMin = Math.min(...P.map((p) => p.pr));
+  const prMax = Math.max(...P.map((p) => p.pr));
+  const withCode = P.filter((p) => p.code && p.code.length >= 10).length;
   $('#researchBox').innerHTML = `
+    <div class="data-strip">
+      <div class="ds-item"><span class="ds-num">${n}</span><span class="ds-label">真实产品</span></div>
+      <div class="ds-item"><span class="ds-num">${cats}</span><span class="ds-label">监管分类</span></div>
+      <div class="ds-item"><span class="ds-num">R${prMin}–R${prMax}</span><span class="ds-label">风险等级</span></div>
+      <div class="ds-item"><span class="ds-num">${withCode}</span><span class="ds-label">登记编码可核验</span></div>
+    </div>
+
     <div class="research-grid">
       <div class="mcard rc-card">
         <div class="rc-head">
@@ -752,7 +764,19 @@ function buildResearch() {
         <div class="why-item"><span class="why-icon">🧩</span><b>研究更少</b><span>理财说明书文本因子研究基本空白</span></div>
         <div class="why-item"><span class="why-icon">💼</span><b>业务更近</b><span>资管公司大量业务是理财代销/管理</span></div>
       </div>
-      <div class="hint" style="margin-top:12px">当前库内 <b>${n}</b> 款产品（4 大类 + 4 级条款灯 + 净值序列 + 说明书语料）。完整研究路线见项目 docs/（research-plan.md / data-collection-plan.md）。</div>
+    </div>
+
+    <div class="mcard" style="margin-top:16px">
+      <h3>里程碑路线</h3>
+      <div class="milestone">
+        <div class="ms-item done"><span class="ms-dot"></span><div><b>M0 · 数据底座</b><p>结构化字段 + 说明书文本语料（本工具已落地）</p></div></div>
+        <div class="ms-item done"><span class="ms-dot"></span><div><b>M1 · 横截面实证</b><p>结构化因子 × 收益/风险回归（scripts/m1_factor_regression.py）</p></div></div>
+        <div class="ms-item"><span class="ms-dot"></span><div><b>M2 · 规则文本因子</b><p>条款 λ 本体库扩充 + 分组检验</p></div></div>
+        <div class="ms-item"><span class="ms-dot"></span><div><b>M3 · 离散约束优化</b><p>均值-方差 + 整数规划组合模型</p></div></div>
+        <div class="ms-item"><span class="ms-dot"></span><div><b>M4 · 语义风险因子</b><p>FinGPT 风险语义嵌入 + 预测模型</p></div></div>
+        <div class="ms-item"><span class="ms-dot"></span><div><b>M5 · 论文/报告</b><p>1 篇方法 + 1 篇实证</p></div></div>
+      </div>
+      <div class="hint" style="margin-top:10px">完整研究路线与数据采集计划见项目 docs/（research-plan.md / data-collection-plan.md）。</div>
     </div>`;
 }
 
