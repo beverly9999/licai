@@ -148,9 +148,20 @@ main{max-width:1180px;margin:0 auto;padding:26px 22px 8px}
 .stage:hover{border-color:var(--line2);transform:translateY(-2px);box-shadow:var(--shadowUp)}
 .stage.sel{border-color:var(--brand);background:var(--brandSoft)}
 .stage.sel::before{opacity:1}
-.stage .sname{font-weight:700;font-size:15px;margin-bottom:5px}
-.stage .sgoal{color:var(--muted);font-size:12px;min-height:34px}
-.stage .salloc{margin-top:8px;font-size:12px;color:var(--text2)}
+.stage-head{display:flex;align-items:center;gap:11px;margin-bottom:9px}
+.stage-icon{font-size:26px;line-height:1;flex:none}
+.stage-titles{flex:1;min-width:0}
+.stage .sname{font-weight:700;font-size:15px;margin-bottom:4px}
+.stage .sgoal{color:var(--muted);font-size:12px;min-height:34px;margin-bottom:2px}
+.risk-badge{display:inline-block;font-size:11px;font-weight:700;padding:1px 9px;border-radius:10px;background:var(--grayBg);color:var(--muted)}
+.risk-badge.r1{background:var(--greenBg);color:var(--green)}
+.risk-badge.r2{background:#eef7ee;color:#3b8a4a}
+.risk-badge.r3{background:var(--yellowBg);color:var(--yellow)}
+.risk-badge.r4{background:var(--orangeBg);color:var(--orange)}
+.risk-badge.r5{background:var(--redBg);color:var(--red)}
+.stage-cta{margin-top:3px;font-size:11px;color:var(--sub);text-align:center;border-top:1px dashed var(--line);padding-top:7px;opacity:.9}
+.stage.sel .stage-cta{color:var(--brand);font-weight:650}
+[data-theme="dark"] .risk-badge.r2{background:rgba(74,222,128,.13);color:#4ade80}
 
 /* 配比条 */
 .allocbar{display:flex;height:28px;border-radius:8px;overflow:hidden;margin:10px 0;font-size:11px}
@@ -336,10 +347,27 @@ th.no-sort{cursor:default}
 
 /* ============ 研究路线 ============ */
 .research-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.research-grid .mcard h3{margin-bottom:6px}
-.research-ol{padding-left:20px;color:var(--text2);font-size:13px;display:grid;gap:8px;margin-top:10px}
-.why-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px;font-size:13px;color:var(--text2)}
-.why-grid div{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+.rc-card{position:relative}
+.rc-head{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.rc-badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 11px;border-radius:12px;margin-bottom:8px;letter-spacing:.02em}
+.rc-badge.q1{background:var(--brandSoft);color:var(--brand)}
+.rc-badge.q2{background:rgba(8,145,178,.13);color:var(--accent)}
+.rc-card h3{font-size:16px;margin-bottom:5px;line-height:1.4}
+.rc-sub{color:var(--muted);font-size:12.5px;line-height:1.55}
+.rc-steps{display:flex;flex-direction:column;gap:7px;margin:6px 0 13px}
+.rc-step{display:flex;gap:11px;align-items:flex-start}
+.rc-num{flex:none;width:22px;height:22px;border-radius:50%;background:var(--brandSoft);color:var(--brand);font-weight:700;font-size:12px;display:grid;place-items:center;margin-top:1px}
+.rc-step b{font-size:13px}
+.rc-step p{font-size:12px;color:var(--muted);margin-top:1px;line-height:1.5}
+.rc-flow{color:var(--sub);font-size:11px;text-align:center;margin-left:22px;line-height:1}
+.rc-link{font-size:11.5px;color:var(--sub);margin-top:2px}
+.why-card h3{margin-bottom:4px}
+.why-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px;margin-top:12px}
+.why-item{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 13px;display:flex;flex-direction:column;gap:3px;transition:.15s}
+.why-item:hover{border-color:var(--brand);background:var(--brandSoft)}
+.why-icon{font-size:21px;line-height:1}
+.why-item b{font-size:13px;margin-top:2px}
+.why-item span{font-size:11.5px;color:var(--muted);line-height:1.45}
 
 /* ============ 响应式 ============ */
 @media(max-width:760px){

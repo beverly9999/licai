@@ -102,16 +102,21 @@ function similarProducts(code, k = 5) {
 
 /* ---------- 主题切换（浅色/深色，canvas 配色跟随） ---------- */
 const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+// 安全存储：file:// 直接双击打开时 localStorage 可能不可用，读写都容错，避免整页白屏
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
 let palette = [];
 function refreshPalette() { palette = ['--r1', '--r2', '--r3', '--r4'].map(cssVar); }
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
-  localStorage.setItem('licai-theme', t);
+  store.set('licai-theme', t);
   const btn = $('#themeBtn'); if (btn) btn.textContent = t === 'dark' ? '☀️' : '🌙';
   refreshPalette();
   if ($('#compare').classList.contains('active')) drawCompare();
 }
-applyTheme(localStorage.getItem('licai-theme') || 'light');
+applyTheme(store.get('licai-theme') || 'light');
 document.addEventListener('DOMContentLoaded', () => {
   $('#themeBtn').addEventListener('click', () =>
     applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
@@ -208,14 +213,26 @@ function allocBar(a) {
 }
 
 /* ---------- ② 生命周期配置 ---------- */
+const STAGE_ICONS = { single: '🎯', newlywed: '💑', parenting: '👶', growth: '🌱', empty: '🕊️', retire: '🌅' };
+function riskBadge(riskLevel) {
+  const m = (riskLevel || '').match(/C([1-5])/);
+  const cls = m ? ' r' + m[1] : '';
+  return `<span class="risk-badge${cls}">${esc(riskLevel || '')}</span>`;
+}
 function buildStages() {
   const box = $('#stages');
   box.innerHTML = STATE.lifecycle.stages.map((s) => `
     <div class="stage" data-id="${s.id}">
-      <div class="sname">${s.name}</div>
-      <div class="sgoal">${s.goal}</div>
-      <div class="salloc">风险偏好：${s.riskLevel}</div>
+      <div class="stage-head">
+        <span class="stage-icon">${STAGE_ICONS[s.id] || '🏦'}</span>
+        <div class="stage-titles">
+          <div class="sname">${esc(s.name)}</div>
+          <div class="srisk">${riskBadge(s.riskLevel)}</div>
+        </div>
+      </div>
+      <div class="sgoal">${esc(s.goal)}</div>
       ${allocBar(s.alloc)}
+      <div class="stage-cta">点击生成配置方案 →</div>
     </div>`).join('');
   $$('.stage', box).forEach((el) => el.addEventListener('click', () => {
     $$('.stage', box).forEach((x) => x.classList.remove('sel'));
@@ -657,37 +674,51 @@ function buildResearch() {
   const n = STATE.products.length;
   $('#researchBox').innerHTML = `
     <div class="research-grid">
-      <div class="mcard">
-        <h3>问题一 · 离散金融的落地</h3>
-        <div class="hint">如何把传统数理金融真正用于「有限类」理财（离散监管分类 + 离散风险等级 + 离散流动性锁定）？</div>
-        <ol class="research-ol">
-          <li><b>嵌入层</b>：把离散类别（固收/混合/权益/商品衍生、PR1–5）映射到由净值序列估计的连续因子坐标（μ、σ、MDD、β）。—— 本工具的「八维标准化 + 相似聚类（特征马氏距离 + 净值协方差）」即其最小版本。</li>
-          <li><b>优化层</b>：在协方差矩阵上解均值-方差 / 风险预算，并把风险硬约束（PR≤C）、封闭期锁定、持有期错配显式写进约束集。</li>
-          <li><b>整数层</b>：混合整数规划输出「可落地产品清单 + 金额 + 再平衡日历」，而非连续权重。</li>
-        </ol>
+      <div class="mcard rc-card">
+        <div class="rc-head">
+          <span class="rc-badge q1">问题一 · 离散金融</span>
+          <h3>传统数理金融如何真正落地到「有限类」理财</h3>
+          <p class="rc-sub">理财是离散监管分类 + 离散风险等级 + 离散流动性锁定，难点是把离散约束嵌入连续金融框架。</p>
+        </div>
+        <div class="rc-steps">
+          <div class="rc-step"><span class="rc-num">1</span><div><b>嵌入层</b><p>离散类别 → 连续因子坐标（μ、σ、MDD、β），由净值序列估计</p></div></div>
+          <div class="rc-flow">↓</div>
+          <div class="rc-step"><span class="rc-num">2</span><div><b>优化层</b><p>均值-方差 / 风险预算，把 PR≤C、封闭期、持有期错配写进约束集</p></div></div>
+          <div class="rc-flow">↓</div>
+          <div class="rc-step"><span class="rc-num">3</span><div><b>整数层</b><p>混合整数规划 → 可落地清单 + 金额 + 再平衡日历</p></div></div>
+        </div>
         <div class="formula">min wᵀΣw　s.t. wᵀμ ≥ μ₀, Σw=1, xᵢ∈{0,1}, wᵢ≤M·xᵢ, cLevel≤C</div>
+        <div class="hint rc-link">本工具的「八维标准化 + 相似聚类（马氏距离 + 净值协方差）」即嵌入层最小版本</div>
       </div>
-      <div class="mcard">
-        <h3>问题二 · 文本因子预测风险与收益</h3>
-        <div class="hint">说明书/公告等描述能否预测理财的风险与收益？（对应股票研究的「多因子 / 文本因子」主线）</div>
-        <ol class="research-ol">
-          <li><b>结构化因子</b>：费率、流动性、机构信用 → 横截面回归 rᵢ=α+ΣβₖFᵢₖ+εᵢ。</li>
-          <li><b>规则文本因子</b>：条款风险 λ（本工具条款穿透已落地）→ 升级为语义 λ。</li>
-          <li><b>语义文本因子</b>：复用 FinGPT-Decode 对说明书做风险语义嵌入，检验对收益/回撤的预测力。</li>
-        </ol>
-        <div class="hint" style="margin-top:8px">两条主线共用同一套数据底座（结构化字段 + 说明书文本），本页产品数据与条款文本即语料起点。</div>
+
+      <div class="mcard rc-card">
+        <div class="rc-head">
+          <span class="rc-badge q2">问题二 · 文本因子</span>
+          <h3>说明书/描述能否预测风险与收益</h3>
+          <p class="rc-sub">对应股票研究的「多因子 / 文本因子」主线，迁移到研究更少、语料更强的理财资产。</p>
+        </div>
+        <div class="rc-steps">
+          <div class="rc-step"><span class="rc-num">1</span><div><b>结构化因子</b><p>费率、流动性、机构信用 → 横截面回归</p></div></div>
+          <div class="rc-flow">↓</div>
+          <div class="rc-step"><span class="rc-num">2</span><div><b>规则文本因子</b><p>条款风险 λ（本工具已落地）→ 升级语义 λ</p></div></div>
+          <div class="rc-flow">↓</div>
+          <div class="rc-step"><span class="rc-num">3</span><div><b>语义文本因子</b><p>FinGPT 风险语义嵌入，检验对收益/回撤的预测力</p></div></div>
+        </div>
+        <div class="formula">rᵢ = α + Σ βₖ·Fᵢₖ + εᵢ</div>
+        <div class="hint rc-link">两条主线共用同一套数据底座（结构化字段 + 说明书文本语料）</div>
       </div>
     </div>
-    <div class="mcard" style="margin-top:16px">
+
+    <div class="mcard why-card">
       <h3>为什么把研究放在「理财」而不是股票</h3>
       <div class="why-grid">
-        <div>① 规模更大：银行理财存续规模超过股票流通市值，是更大的资产池。</div>
-        <div>② 人群更广：覆盖更多普通投资者，研究的社会意义更大。</div>
-        <div>③ 有特殊性：离散分类、封闭期锁定、条款风险 λ 是理财独有、股票没有。</div>
-        <div>④ 研究更少：文本因子研究集中在股票财报/研报，理财说明书基本空白。</div>
-        <div>⑤ 业务更近：资管公司大量业务是理财代销/管理，而非直投选股。</div>
+        <div class="why-item"><span class="why-icon">📊</span><b>规模更大</b><span>银行理财存续规模超过股票流通市值</span></div>
+        <div class="why-item"><span class="why-icon">👥</span><b>人群更广</b><span>覆盖更多普通投资者，社会意义更大</span></div>
+        <div class="why-item"><span class="why-icon">🔍</span><b>有特殊性</b><span>离散分类、封闭期、条款 λ 是理财独有</span></div>
+        <div class="why-item"><span class="why-icon">🧩</span><b>研究更少</b><span>理财说明书文本因子研究基本空白</span></div>
+        <div class="why-item"><span class="why-icon">💼</span><b>业务更近</b><span>资管公司大量业务是理财代销/管理</span></div>
       </div>
-      <div class="hint" style="margin-top:10px">当前库内 ${n} 款产品（4 大类 + 4 级条款灯 + 净值序列 + 说明书语料）。数据持续扩充计划与完整研究路线见项目 docs/（research-plan.md / data-collection-plan.md）。</div>
+      <div class="hint" style="margin-top:12px">当前库内 <b>${n}</b> 款产品（4 大类 + 4 级条款灯 + 净值序列 + 说明书语料）。完整研究路线见项目 docs/（research-plan.md / data-collection-plan.md）。</div>
     </div>`;
 }
 
