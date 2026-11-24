@@ -27,11 +27,11 @@ const numCell = (c) => (c.num ? 'num' : '');
 const DIM_NAMES = ['收益水平', '风险水平', '期限流动性', '费率成本', '发行机构信用', '业绩稳定性', '投资门槛', '条款友好度'];
 const COLUMNS = [
   { key: 'sFinal100', label: '综合分', num: true, dir: -1, default: true,
-    get: (p) => p.sFinal100, fmt: (x) => '<span class="score-pill">' + x + '</span>' },
+    get: (p) => p.sFinal100, fmt: (x) => '<span class="score-pill ' + (x >= 85 ? 'shi' : x >= 70 ? 'smid' : 'slo') + '">' + x + '</span>' },
   { key: 'name', label: '产品名称', default: true, get: (p) => p.name, fmt: (x) => x },
   { key: 'issuer', label: '机构', default: true, get: (p) => p.issuer, fmt: (x) => x },
-  { key: 'category', label: '分类', default: true, get: (p) => p.category, fmt: (x) => x },
-  { key: 'pr', label: '风险', num: true, dir: 1, default: true, get: (p) => p.pr, fmt: (x) => 'PR' + x },
+  { key: 'category', label: '分类', default: true, get: (p) => p.category, fmt: (x) => '<span class="cat-chip">' + esc(x) + '</span>' },
+  { key: 'pr', label: '风险', num: true, dir: 1, default: true, get: (p) => p.pr, fmt: (x) => '<span class="pr-badge r' + x + '">PR' + x + '</span>' },
   { key: 'r1m', label: '近1月收益', num: true, dir: -1, default: true, get: (p) => p.r1m, fmt: fmtRet },
   { key: 'annRet', label: '年化收益', num: true, dir: -1, default: true, get: (p) => p.annRet, fmt: fmtRet },
   { key: 'maxDD', label: '最大回撤', num: true, dir: 1, default: true, get: (p) => p.maxDD, fmt: fmtP1 },
@@ -507,26 +507,36 @@ function drawCompare() {
   }
   const items = STATE.compare.map((c) => STATE.products.find((p) => p.code === c)).filter(Boolean);
   bar.innerHTML = items.map((p, i) => `<div class="cmp-tag">
-    <span class="sw" style="width:12px;height:12px;border-radius:3px;background:${palette[i]}"></span>
-    ${p.name}<span class="x" onclick="removeCompare('${p.code}')">×</span></div>`).join('');
+    <span class="sw" style="background:${palette[i]}"></span>
+    <span class="cmp-name">${esc(p.name)}</span><span class="x" onclick="removeCompare('${p.code}')">×</span></div>`).join('') +
+    '<button class="cmp-clear" onclick="clearCompare()">清空</button>';
   drawRadar(items);
-  // 指标对比表
+  // 指标对比表（高亮每行最优值；dir -1=越大越好，1=越小越好）
   const rows = [
-    ['综合评分', (p) => p.sFinal100],
-    ['风险等级', (p) => 'PR' + p.pr],
-    ['近1年年化', (p) => fmtPct(p.annRet)],
-    ['年化波动', (p) => fmtPct(p.annVol)],
-    ['最大回撤', (p) => fmtPct(p.maxDD)],
-    ['夏普比率', (p) => p.sharpe],
-    ['综合费率', (p) => fmtPct(p.totalFeeRate)],
-    ['起购金额', (p) => '¥' + p.minInvest.toLocaleString()],
-    ['条款/λ', (p) => toneLabel[p.clause.tone] + ' ' + p.lambda],
+    ['综合评分', (p) => p.sFinal100, 'num', -1, (v) => String(v)],
+    ['风险等级', (p) => p.pr, '', 1, (v) => 'PR' + v],
+    ['近1年年化', (p) => p.annRet, 'num', -1, (v) => fmtPct(v)],
+    ['年化波动', (p) => p.annVol, 'num', 1, (v) => fmtPct(v)],
+    ['最大回撤', (p) => p.maxDD, 'num', 1, (v) => fmtPct(v)],
+    ['夏普比率', (p) => p.sharpe, 'num', -1, (v) => String(v)],
+    ['综合费率', (p) => p.totalFeeRate, 'num', 1, (v) => fmtPct(v)],
+    ['起购金额', (p) => p.minInvest, 'num', 1, (v) => '¥' + v.toLocaleString()],
+    ['条款/λ', (p) => p.lambda, 'num', -1, (v) => v.toFixed(2)],
   ];
-  $('#compareTable').innerHTML = `<table><thead><tr><th>指标</th>${items.map((p, i) => `<th><span class="dot" style="background:${palette[i]}"></span>${p.name}</th>`).join('')}</tr></thead>
-    <tbody>${rows.map(([k, f]) => `<tr><td>${k}</td>${items.map((p) => `<td>${f(p)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  $('#compareTable').innerHTML = `<table><thead><tr><th>指标</th>${items.map((p, i) => `<th><span class="dot" style="background:${palette[i]}"></span>${esc(p.name)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(([k, get, cls, dir, fmt]) => {
+      const vals = items.map(get);
+      const best = dir === -1 ? Math.max(...vals) : Math.min(...vals);
+      return `<tr><td>${k}</td>${items.map((p) => {
+        const v = get(p);
+        return `<td class="${cls} ${v === best ? 'best' : ''}">${fmt(v)}</td>`;
+      }).join('')}</tr>`;
+    }).join('')}</tbody></table>`;
 }
 function removeCompare(code) { STATE.compare = STATE.compare.filter((c) => c !== code); drawCompare(); renderRank(); }
 window.removeCompare = removeCompare;
+function clearCompare() { STATE.compare = []; drawCompare(); renderRank(); }
+window.clearCompare = clearCompare;
 
 function drawRadar(items) {
   const cv = $('#radar'), ctx = cv.getContext('2d');
@@ -630,11 +640,28 @@ function buildOntology() {
 function buildMethod() {
   const w = STATE.weights;
   const maxW = Math.max(...w.final.map((x) => x.w));
-  const bars = (arr, cls) => arr.map((x) => `
-    <div class="wbar"><span style="width:120px">${x.key} ${x.name}</span>
+  const rankMap = {};
+  [...w.final].sort((a, b) => b.w - a.w).forEach((x, i) => { rankMap[x.key] = i + 1; });
+  const bars = (arr, cls) => arr.map((x) => {
+    const r = rankMap[x.key];
+    return `
+    <div class="wbar">
+      <span class="w-rank${r <= 3 ? ' top' + r : ''}">${r}</span>
+      <span class="w-name">${x.name}</span>
       <div class="track"><div class="fill ${cls}" style="width:${(x.w / maxW * 100).toFixed(1)}%"></div></div>
-      <span style="width:52px;text-align:right">${(x.w * 100).toFixed(1)}%</span></div>`).join('');
+      <span class="w-pct">${(x.w * 100).toFixed(1)}%</span>
+    </div>`;
+  }).join('');
+  const alphaPct = (w.alpha * 100).toFixed(1);
+  const entPct = (100 - w.alpha * 100).toFixed(1);
   $('#methodBox').innerHTML = `
+    <div class="alpha-strip">
+      <div class="alpha-head"><b>组合赋权结构</b><span class="hint">主观 AHP 与客观熵值法的博弈论最优融合（α*=${w.alpha}）</span></div>
+      <div class="alpha-bar">
+        <span class="seg-ahp" style="width:${alphaPct}%">AHP 主观 ${alphaPct}%</span>
+        <span class="seg-ent" style="width:${entPct}%">熵值 客观 ${entPct}%</span>
+      </div>
+    </div>
     <div class="method-grid">
       <div class="mcard">
         <h3>最终组合权重 W_final</h3>
@@ -645,8 +672,8 @@ function buildMethod() {
         <h3>博弈论组合系数</h3>
         <div class="formula">α* = (E·Eᵀ − A·Eᵀ) / (A·Aᵀ + E·Eᵀ − 2·A·Eᵀ)</div>
         <div class="kv"><span>最优组合系数 α*</span><b>${w.alpha}</b></div>
-        <div class="kv"><span>主观(AHP)占比</span><b>${(w.alpha * 100).toFixed(1)}%</b></div>
-        <div class="kv"><span>客观(熵值)占比</span><b>${((1 - w.alpha) * 100).toFixed(1)}%</b></div>
+        <div class="kv"><span>主观(AHP)占比</span><b>${alphaPct}%</b></div>
+        <div class="kv"><span>客观(熵值)占比</span><b>${entPct}%</b></div>
         <h3 style="margin-top:14px">AHP 一致性检验</h3>
         <div class="kv"><span>λ_max</span><b>${w.ahpCheck.lambdaMax}</b></div>
         <div class="kv"><span>CI</span><b>${w.ahpCheck.CI}</b></div>
@@ -665,8 +692,14 @@ function buildMethod() {
     </div>
     <div class="mcard" style="margin-top:16px">
       <h3>混合评价模型 HWEM 计分链</h3>
+      <div class="hwem-flow">
+        <span class="hf-node">八维指标 Z</span><span class="hf-arrow">→</span>
+        <span class="hf-node">组合加权 Σ wₖ·Zₖ</span><span class="hf-arrow">→</span>
+        <span class="hf-node warn">条款 λ 惩罚 ×</span><span class="hf-arrow">→</span>
+        <span class="hf-node out">S_final</span>
+      </div>
       <div class="formula">S_final = ( Σₖ₌₁⁷ wₖ · Zₖ ) × λ_LLM　（λ ∈ {红0.65, 橙0.80, 黄0.92, 绿1.00}）</div>
-      <div class="hint">前 7 维为客观定量指标的组合加权得分，第 8 维「条款友好度」经 LLM/规则穿透转化为语义风险惩罚系数 λ，以乘法形式对最终得分实施「一票降权」。</div>
+      <div class="hint">前 7 维客观定量指标组合加权，第 8 维「条款友好度」经规则/语义穿透转 λ，乘法实施「一票降权」。</div>
     </div>`;
 }
 
