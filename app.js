@@ -6,7 +6,7 @@ const api = (u, opt) => window.__STATIC_API__(u, opt);
 const fmtPct = (x) => (x * 100).toFixed(2) + '%';
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const toneColor = { green: '#8a9a7b', yellow: '#b08e5a', orange: '#b58b6e', red: '#b58383' };
+const toneColor = { green: '#52c41a', yellow: '#faad14', orange: '#fa8c16', red: '#f5222d' };
 const toneLabel = { green: '🟢 绿灯 (安全)', yellow: '🟡 黄灯 (关注)', orange: '🟠 橙灯 (中高)', red: '🔴 红灯 (高危)' };
 
 let STATE = { products: [], weights: null, dims: [], lifecycle: null, ontology: null,
@@ -118,9 +118,20 @@ function applyTheme(t) {
   if ($('#compare').classList.contains('active')) drawCompare();
 }
 applyTheme(store.get('licai-theme') || 'light');
+
+/* ---------- 长辈模式（大字版）：放大字体，方便老人阅读 ---------- */
+function applyElder(on) {
+  if (on) document.documentElement.dataset.elder = 'true';
+  else delete document.documentElement.dataset.elder;
+  store.set('licai-elder', on ? '1' : '0');
+  const btn = $('#elderBtn'); if (btn) btn.classList.toggle('on', on);
+}
+applyElder(store.get('licai-elder') === '1');
 document.addEventListener('DOMContentLoaded', () => {
   $('#themeBtn').addEventListener('click', () =>
     applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+  $('#elderBtn').addEventListener('click', () =>
+    applyElder(document.documentElement.dataset.elder !== 'true'));
 });
 
 function toast(msg) {
@@ -185,7 +196,7 @@ $('#quizSubmit').addEventListener('click', async () => {
   const r = await api('/api/assess', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answers }) });
   STATE.cLevel = r.cLevel; STATE.alloc = r.alloc;
   const box = $('#quizResult'); box.classList.remove('hidden');
-  const colors = ['#8a9a7b', '#8a9a7b', '#a3b18a', '#b08e5a', '#b58b6e', '#b58383'];
+  const colors = ['#52c41a', '#52c41a', '#a0d911', '#faad14', '#fa8c16', '#f5222d'];
   box.innerHTML = `
     <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
       <div>
@@ -492,7 +503,7 @@ function drawNav(cv, nav) {
     const y = H - pad - (H - 2 * pad) * (v - min) / span;
     i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
   });
-  ctx.strokeStyle = nav[nav.length - 1] >= nav[0] ? '#8a9a7b' : '#b58383';
+  ctx.strokeStyle = nav[nav.length - 1] >= nav[0] ? '#f5222d' : '#52c41a';
   ctx.lineWidth = 2; ctx.stroke();
 }
 
